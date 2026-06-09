@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>特教巡迴輔導智慧紀錄系統</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+    <!-- 頂部導覽列 -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg">
+                    <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900">特教巡迴輔導智慧紀錄助手</h1>
+                    <p class="text-xs text-slate-500">語音轉譯 · IEP 智慧摘要 · 情巡/自巡教師專用</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="resetApiKey()" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors" title="重新設定您的 Gemini API 金鑰">
+                    <i data-lucide="key" class="w-3.5 h-3.5 mr-1"></i>
+                    更換金鑰
+                </button>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                    <span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Gemini AI 線上支援
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- 左側：學生選擇與設定 -->
+            <div class="lg:col-span-4 space-y-6">
+                <!-- 學生名冊卡片 -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-md font-bold text-slate-900 flex items-center">
+                            <i data-lucide="users" class="w-5 h-5 mr-2 text-indigo-600"></i>
+                            輔導學生清單
+                        </h2>
+                        <button onclick="openAddStudentModal()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+                            <i data-lucide="plus" class="w-3.5 h-3.5 mr-0.5"></i>新增
+                        </button>
+                    </div>
+
+                    <!-- 搜尋 -->
+                    <div class="relative mb-4">
+                        <input type="text" id="searchStudent" placeholder="搜尋學生或類別..." class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                    </div>
+
+                    <!-- 學生列表容器 -->
+                    <div class="space-y-2 max-h-[280px] overflow-y-auto pr-1" id="studentListContainer">
+                        <!-- 動態載入學生 -->
+                    </div>
+                </div>
+
+                <!-- 錄音與處理說明 -->
+                <div class="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
+                    <h3 class="text-sm font-bold text-indigo-950 mb-2 flex items-center">
+                        <i data-lucide="info" class="w-4 h-4 mr-2 text-indigo-600"></i>
+                        如何錄製高品質語音？
+                    </h3>
+                    <ul class="text-xs text-indigo-900 space-y-2 list-disc list-inside">
+                        <li>輔導結束後，花 2-3 分鐘用語音口述描述學生的狀況。</li>
+                        <li>例如：「今天小明一開始情緒焦躁，因為排隊問題打同學。我使用了社會故事引導，並給予代幣，後半堂課表現穩定...」</li>
+                        <li>AI 會自動幫您將這些口語內容轉化成特教專業報告術語！</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 右側：語音處理與紀錄生成區 -->
+            <div class="lg:col-span-8 space-y-6">
+                <!-- 語音上傳與錄製面板 -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                    <h2 class="text-lg font-bold text-slate-900 mb-6 flex items-center">
+                        <i data-lucide="mic" class="w-5 h-5 mr-2 text-indigo-600"></i>
+                        第一步：提供輔導語音
+                    </h2>
+
+                    <!-- 選擇錄製或上傳切換 -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <button id="tabRecord" onclick="switchInputTab('record')" class="py-3 px-4 rounded-xl border-2 border-indigo-600 text-indigo-600 font-medium text-sm flex items-center justify-center space-x-2 bg-indigo-50/50">
+                            <i data-lucide="mic-vocal" class="w-4 h-4"></i>
+                            <span>現場錄製口述</span>
+                        </button>
+                        <button id="tabUpload" onclick="switchInputTab('upload')" class="py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm flex items-center justify-center space-x-2 hover:bg-slate-50">
+                            <i data-lucide="file-audio" class="w-4 h-4"></i>
+                            <span>上傳語音檔案 (MP3/WAV/M4A)</span>
+                        </button>
+                    </div>
+
+                    <!-- 錄音介面 -->
+                    <div id="recordSection" class="border border-slate-100 rounded-xl p-8 bg-slate-50 text-center space-y-4">
+                        <div class="flex justify-center">
+                            <div id="recordPulse" class="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center transition-all duration-300">
+                                <button id="recordBtn" class="w-16 h-16 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 focus:outline-none focus:ring-4 focus:ring-red-200 transition-all">
+                                    <i data-lucide="mic" class="w-8 h-8" id="micIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-sm font-semibold text-slate-700" id="recordStatusText">點擊紅色按鈕開始錄音</p>
+                            <p class="text-xs text-slate-500" id="recordTimer">00:00</p>
+                        </div>
+                        <div class="hidden flex justify-center space-x-4" id="audioPlaybackContainer">
+                            <audio id="audioPlayback" controls class="w-full max-w-md"></audio>
+                        </div>
+                    </div>
+
+                    <!-- 上傳介面 -->
+                    <div id="uploadSection" class="hidden border-2 border-dashed border-slate-200 rounded-xl p-8 text-center space-y-4 hover:border-indigo-400 transition-all cursor-pointer" onclick="document.getElementById('audioFileInput').click()">
+                        <input type="file" id="audioFileInput" accept="audio/*" class="hidden" onchange="handleAudioUpload(event)">
+                        <div class="flex justify-center">
+                            <div class="p-4 bg-indigo-50 rounded-full text-indigo-600">
+                                <i data-lucide="cloud-upload" class="w-10 h-10"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-slate-700" id="uploadFileName">點擊或拖曳您的語音檔案至此處</p>
+                            <p class="text-xs text-slate-400 mt-1">支援 mp3, wav, m4a, webm 等格式</p>
+                        </div>
+                    </div>
+
+                    <!-- 備用文字輸入 -->
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <details class="text-xs text-slate-500 cursor-pointer">
+                            <summary class="hover:text-indigo-600 transition-colors">不想錄音？展開直接貼上「亂七八糟的口語草稿」讓 AI 重新整理為特教紀錄</summary>
+                            <div class="mt-2 space-y-2">
+                                <textarea id="fallbackTextInput" rows="4" placeholder="例如：小明今天來心裡很不爽，因為打掃時間被同學激怒。本來想抓狂打人，我把他拉到角落給他深呼吸，然後用社會故事跟他說。後來他冷靜了有回去扫地。下禮拜要追蹤看他有沒有再打人..." class="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm"></textarea>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- 送出轉換按鈕 -->
+                    <div class="mt-6 flex justify-end">
+                        <button id="generateBtn" onclick="processCounselingRecord()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2">
+                            <i data-lucide="wand-sparkles" class="w-4 h-4"></i>
+                            <span>開始智慧生成輔導紀錄</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 狀態提示 / 生成中 -->
+                <div id="loadingContainer" class="hidden bg-white rounded-2xl p-8 border border-slate-200 shadow-sm text-center space-y-4">
+                    <div class="flex justify-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                    </div>
+                    <div class="space-y-1">
+                        <p class="text-sm font-semibold text-slate-700">Gemini AI 正在分析輔導語音中...</p>
+                        <p class="text-xs text-slate-500">正在進行「語音轉譯」與「IEP 架構智慧摘要整理」，這可能需要 15-30 秒，請勿關閉視窗。</p>
+                    </div>
+                </div>
+
+                <!-- 生成結果展示面版 -->
+                <div id="resultContainer" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="bg-indigo-900 px-6 py-4 text-white flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="file-check-2" class="w-5 h-5 text-indigo-200"></i>
+                            <div>
+                                <h3 class="font-bold text-sm" id="resultTitle">學生輔導紀錄 - 待確認草稿</h3>
+                                <p class="text-xs text-indigo-200" id="resultSubtitle">輔導對象：無</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="copyToClipboard()" class="bg-indigo-800 hover:bg-indigo-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1 transition-all">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                <span>複製內容</span>
+                            </button>
+                            <button onclick="saveRecord()" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1 transition-all">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                                <span>儲存紀錄</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 雙欄比對：逐字稿 vs 結構化紀錄 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+                        <!-- 左半：語音逐字稿 -->
+                        <div class="p-6 space-y-3">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5 mr-1"></i> 語音轉譯逐字稿
+                            </h4>
+                            <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm leading-relaxed text-slate-600 max-h-[400px] overflow-y-auto" id="transcriptOutput" contenteditable="true">
+                                這裡將會顯示 AI 轉譯後的原始語音內容，您可以直接點選編輯微調。
+                            </div>
+                        </div>
+
+                        <!-- 右半：結構化特教紀錄 -->
+                        <div class="p-6 space-y-3">
+                            <h4 class="text-xs font-bold text-indigo-500 uppercase tracking-wider flex items-center">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 mr-1"></i> IEP 結構化輔導紀錄
+                            </h4>
+                            <div class="bg-indigo-50/30 rounded-xl p-4 border border-indigo-100/50 text-sm leading-relaxed text-slate-700 max-h-[400px] overflow-y-auto" id="structuredOutput" contenteditable="true">
+                                這裡將會顯示自動生成的特教格式報告。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 歷史儲存紀錄 (當前學生) -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                    <h3 class="text-md font-bold text-slate-900 mb-4 flex items-center">
+                        <i data-lucide="history" class="w-5 h-5 mr-2 text-indigo-600"></i>
+                        本生輔導歷史紀錄
+                    </h3>
+                    <div class="space-y-3" id="historyListContainer">
+                        <!-- 動態載入歷史 -->
+                        <p class="text-sm text-slate-400 py-4 text-center">暫無此學生的歷史輔導紀錄</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- 新增學生模態視窗 -->
+    <div id="addStudentModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-md font-bold text-slate-900">新增巡迴輔導學生</h3>
+                <button onclick="closeAddStudentModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">學生代號/姓名</label>
+                    <input type="text" id="newStudentName" placeholder="例如：小明" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">學校與班級</label>
+                    <input type="text" id="newStudentSchool" placeholder="例如：中山國小 三年二班" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">主要障礙類別</label>
+                    <select id="newStudentType" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white">
+                        <option value="情緒行為障礙 (EBD)">情緒行為障礙 (EBD)</option>
+                        <option value="自閉症 (ASD)">自閉症 (ASD)</option>
+                        <option value="注意力不足過動症 (ADHD)">注意力不足過動症 (ADHD)</option>
+                        <option value="學習障礙 (LD)">學習障礙 (LD)</option>
+                        <option value="智能障礙 (ID)">智能障礙 (ID)</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 pt-3">
+                <button onclick="closeAddStudentModal()" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50">取消</button>
+                <button onclick="saveNewStudent()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700">儲存學生</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自訂通知 Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center space-x-2 translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <i data-lucide="info" class="w-5 h-5 text-indigo-400" id="toastIcon"></i>
+        <span class="text-sm font-medium" id="toastText">通知訊息</span>
+    </div>
+
+    <script>
+        // API Key 管理邏輯
+        let apiKey = localStorage.getItem('gemini_api_key');
+
+        function checkApiKey() {
+            if (!apiKey) {
+                apiKey = prompt("💡 初次使用請設定您的 Gemini API Key：\n(金鑰將安全地儲存於您個人的瀏覽器中，不會傳送給第三方)");
+                if (apiKey && apiKey.trim() !== "") {
+                    apiKey = apiKey.trim();
+                    localStorage.setItem('gemini_api_key', apiKey);
+                    showToast("API 金鑰設定完成！");
+                } else {
+                    alert("⚠️ 必須輸入 API Key 才能啟用 AI 智慧分析功能！請重新整理網頁再試一次。");
+                }
+            }
+        }
+
+        function resetApiKey() {
+            if (confirm("確定要清除目前儲存的 API Key 並重新設定嗎？")) {
+                localStorage.removeItem('gemini_api_key');
+                apiKey = null;
+                checkApiKey();
+            }
+        }
+
+        // 初始化 Mock 學生資料
+        let students = [
+            { id: "s1", name: "小明", school: "成功國小 三年甲班", type: "自閉症 (ASD)", active: true },
+            { id: "s2", name: "小華", school: "大安國小 五年乙班", type: "情緒行為障礙 (EBD)", active: false },
+            { id: "s3", name: "小傑", school: "信義國中 八年三班", type: "注意力不足過動症 (ADHD)", active: false }
+        ];
+
+        // 儲存紀錄資料結構
+        let savedRecords = [
+            {
+                id: "r1",
+                studentId: "s1",
+                date: "2026-05-25",
+                transcript: "今天小明情緒一開始不穩，因為上課前鐘聲響太快他沒有心理準備。我們進到輔導室之後，他拒絕坐下並拍打桌子。我採用視覺化課表提示，告知他今天的任務只有三項，完成後可以得到最喜歡的火車貼紙。他看完課表後，呼吸漸趨平穩，並願意坐下。後半堂完成了情緒認知的配對卡牌，最後表現十分穩定並跟我說謝謝。",
+                summary: "### 一、 學生基本現況與情緒狀態\n學生今日進班時呈現輕度焦慮與抗拒行為（如：拒絕坐下、拍打桌子），主因為外在環境變化（上課鐘聲突響）導致其預期心理受阻。經介入引導後，情緒於 10 分鐘內平穩，展現出良好的自我調節潛力。\n\n### 二、 本次輔導焦點與教學目標\n1. 建立課堂結構化預期心理。\n2. 提升環境突發事件適應力與情緒宣洩管道。\n\n### 三、 採取的輔導策略與具體介入\n1. **視覺化提示**：使用「工作檢核課表」向學生條列行程，降低其未知焦慮。\n2. **正向增強制度**：承諾完成目標給予其偏好物（火車貼紙）作為外在增強物。\n\n### 四、 後續追蹤建議與協同合作事項\n- **給導師建議**：請導師在下課前 1-2 分鐘，提前提醒學生「等一下即將要打鐘，我們要準備進教室囉」，幫助學生建立心理準備期。\n- **家長配合**：在家中亦可嘗試建立類似的工作檢核表，加強課表預期習慣。"
+            }
+        ];
+
+        let selectedStudentId = "s1";
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordTimerInterval;
+        let recordSeconds = 0;
+        let uploadedAudioBase64 = null;
+        let uploadedAudioMimeType = null;
+        let currentTab = 'record';
+
+        window.onload = function() {
+            lucide.createIcons();
+            checkApiKey(); // 載入時檢查 API Key
+            renderStudents();
+            renderHistory(selectedStudentId);
+            initWebAudio();
+        };
+
+        function showToast(text, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toastText');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastText.textContent = text;
+            if (isError) {
+                toast.classList.add('bg-red-900');
+                toastIcon.setAttribute('data-lucide', 'alert-circle');
+            } else {
+                toast.classList.remove('bg-red-900');
+                toastIcon.setAttribute('data-lucide', 'info');
+            }
+            lucide.createIcons();
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function renderStudents() {
+            const container = document.getElementById('studentListContainer');
+            const searchVal = document.getElementById('searchStudent').value.toLowerCase();
+            container.innerHTML = '';
+
+            const filtered = students.filter(s => 
+                s.name.toLowerCase().includes(searchVal) || 
+                s.type.toLowerCase().includes(searchVal) ||
+                s.school.toLowerCase().includes(searchVal)
+            );
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">找不到匹配的學生</p>`;
+                return;
+            }
+
+            filtered.forEach(s => {
+                const isActive = s.id === selectedStudentId;
+                const div = document.createElement('div');
+                div.className = `p-3.5 rounded-xl border cursor-pointer transition-all ${
+                    isActive 
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-100' 
+                    : 'bg-slate-50 border-slate-100 hover:bg-slate-100 text-slate-700'
+                }`;
+                div.onclick = () => selectStudent(s.id);
+
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="font-bold text-sm">${s.name}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full ${
+                            isActive ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-200 text-slate-600'
+                        }">${s.type}</span>
+                    </div>
+                    <p class="text-[11px] mt-1 opacity-80 flex items-center">
+                        <i data-lucide="map-pin" class="w-3 h-3 mr-1 inline"></i>${s.school}
+                    </p>
+                `;
+                container.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        document.getElementById('searchStudent').oninput = renderStudents;
+
+        function selectStudent(id) {
+            selectedStudentId = id;
+            students.forEach(s => s.active = s.id === id);
+            renderStudents();
+            renderHistory(id);
+            
+            const student = students.find(s => s.id === id);
+            showToast(`已切換至學生：${student.name}`);
+            
+            document.getElementById('resultContainer').classList.add('hidden');
+        }
+
+        function renderHistory(studentId) {
+            const container = document.getElementById('historyListContainer');
+            container.innerHTML = '';
+
+            const records = savedRecords.filter(r => r.studentId === studentId);
+            if (records.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center">該名學生尚無儲存的歷史輔導紀錄</p>`;
+                return;
+            }
+
+            records.forEach(r => {
+                const card = document.createElement('div');
+                card.className = "border border-slate-200 rounded-xl p-4 space-y-2 bg-slate-50 hover:bg-slate-100/50 transition-colors";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center border-b border-slate-200/60 pb-1.5">
+                        <span class="text-xs font-bold text-slate-500 flex items-center">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 mr-1 text-slate-400"></i> ${r.date}
+                        </span>
+                        <div class="flex space-x-1.5">
+                            <button onclick="loadHistoryToPanel('${r.id}')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">查看比對</button>
+                            <button onclick="deleteHistoryRecord('${r.id}')" class="text-xs text-red-500 hover:text-red-700 font-medium">刪除</button>
+                        </div>
+                    </div>
+                    <div class="text-xs text-slate-600 line-clamp-3 leading-relaxed mt-1">
+                        ${r.summary.replace(/###/g, '').slice(0, 180)}...
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function loadHistoryToPanel(recordId) {
+            const rec = savedRecords.find(r => r.id === recordId);
+            if (!rec) return;
+
+            const student = students.find(s => s.id === rec.studentId);
+            document.getElementById('resultTitle').textContent = `學生輔導歷史紀錄 - ${rec.date}`;
+            document.getElementById('resultSubtitle').textContent = `輔導對象：${student.name} (${student.type})`;
+
+            document.getElementById('transcriptOutput').innerHTML = rec.transcript.replace(/\n/g, '<br>');
+            document.getElementById('structuredOutput').innerHTML = rec.summary.replace(/\n/g, '<br>');
+
+            document.getElementById('resultContainer').classList.remove('hidden');
+            document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth' });
+            showToast("歷史紀錄已載入面板");
+        }
+
+        function deleteHistoryRecord(recordId) {
+            savedRecords = savedRecords.filter(r => r.id !== recordId);
+            renderHistory(selectedStudentId);
+            showToast("歷史輔導紀錄已刪除", true);
+        }
+
+        function switchInputTab(tab) {
+            currentTab = tab;
+            const tabRecord = document.getElementById('tabRecord');
+            const tabUpload = document.getElementById('tabUpload');
+            const recordSec = document.getElementById('recordSection');
+            const uploadSec = document.getElementById('uploadSection');
+
+            if (tab === 'record') {
+                tabRecord.className = "py-3 px-4 rounded-xl border-2 border-indigo-600 text-indigo-600 font-medium text-sm flex items-center justify-center space-x-2 bg-indigo-50/50";
+                tabUpload.className = "py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm flex items-center justify-center space-x-2 hover:bg-slate-50";
+                recordSec.classList.remove('hidden');
+                uploadSec.classList.add('hidden');
+            } else {
+                tabUpload.className = "py-3 px-4 rounded-xl border-2 border-indigo-600 text-indigo-600 font-medium text-sm flex items-center justify-center space-x-2 bg-indigo-50/50";
+                tabRecord.className = "py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm flex items-center justify-center space-x-2 hover:bg-slate-50";
+                uploadSec.classList.remove('hidden');
+                recordSec.classList.add('hidden');
+            }
+        }
+
+        async function initWebAudio() {
+            const recordBtn = document.getElementById('recordBtn');
+            recordBtn.onclick = async () => {
+                if (!isRecording) {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        mediaRecorder = new MediaRecorder(stream);
+                        audioChunks = [];
+
+                        mediaRecorder.ondataavailable = event => {
+                            audioChunks.push(event.data);
+                        };
+
+                        mediaRecorder.onstop = () => {
+                            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                            const audioUrl = URL.createObjectURL(audioBlob);
+                            
+                            const audioPlayback = document.getElementById('audioPlayback');
+                            audioPlayback.src = audioUrl;
+                            document.getElementById('audioPlaybackContainer').classList.remove('hidden');
+
+                            const reader = new FileReader();
+                            reader.readAsDataURL(audioBlob);
+                            reader.onloadend = () => {
+                                uploadedAudioBase64 = reader.result.split(',')[1];
+                                uploadedAudioMimeType = 'audio/webm';
+                            };
+                        };
+
+                        mediaRecorder.start();
+                        isRecording = true;
+                        startTimer();
+                        updateRecordUI(true);
+                    } catch (err) {
+                        showToast("無法獲取麥克風權限，請確認瀏覽器安全性設定。", true);
+                    }
+                } else {
+                    mediaRecorder.stop();
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                    isRecording = false;
+                    stopTimer();
+                    updateRecordUI(false);
+                }
+            };
+        }
+
+        function updateRecordUI(recording) {
+            const pulse = document.getElementById('recordPulse');
+            const micIcon = document.getElementById('micIcon');
+            const statusText = document.getElementById('recordStatusText');
+
+            if (recording) {
+                pulse.classList.add('bg-red-100', 'scale-110');
+                micIcon.setAttribute('data-lucide', 'square');
+                statusText.innerHTML = `<span class="text-red-500 font-bold animate-pulse">正在錄音中...</span> (再次點擊停止)`;
+            } else {
+                pulse.classList.remove('bg-red-100', 'scale-110');
+                micIcon.setAttribute('data-lucide', 'mic');
+                statusText.textContent = "錄製完成！點擊紅色按鈕重新錄音";
+            }
+            lucide.createIcons();
+        }
+
+        function startTimer() {
+            recordSeconds = 0;
+            const timerEl = document.getElementById('recordTimer');
+            timerEl.textContent = "00:00";
+            recordTimerInterval = setInterval(() => {
+                recordSeconds++;
+                const mins = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+                const secs = String(recordSeconds % 60).padStart(2, '0');
+                timerEl.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(recordTimerInterval);
+        }
+
+        function handleAudioUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('uploadFileName').textContent = `已選擇：${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onloadend = () => {
+                uploadedAudioBase64 = reader.result.split(',')[1];
+                uploadedAudioMimeType = file.type || 'audio/mp3';
+                showToast("語音檔案讀取成功！已準備好進行分析。");
+            };
+        }
+
+        async function processCounselingRecord() {
+            if (!apiKey) {
+                showToast("請先設定 Gemini API Key 才能執行此功能！", true);
+                checkApiKey();
+                return;
+            }
+
+            const student = students.find(s => s.id === selectedStudentId);
+            const fallbackText = document.getElementById('fallbackTextInput').value.trim();
+
+            if (!uploadedAudioBase64 && !fallbackText) {
+                showToast("請先錄製語音、上傳音檔，或在下方填入草稿文字！", true);
+                return;
+            }
+
+            document.getElementById('loadingContainer').classList.remove('hidden');
+            document.getElementById('resultContainer').classList.add('hidden');
+            document.getElementById('generateBtn').disabled = true;
+
+            const studentContext = `目前輔導對象：${student.name}，學校與班級：${student.school}，主要障礙類別：${student.type}。`;
+            const systemPrompt = `你是一位深具同理心且極為專業的台灣特殊教育巡迴輔導老師。
+你的任務是讀取巡迴老師的「輔導口述語音」或「對談文字紀錄」，將其整理為符合台灣特教 IEP 規範的「專業巡迴輔導紀錄」。
+
+請遵循以下指導原則整理：
+1. 【語意潤飾】：將口語化、斷續、重複的語音內容，轉譯為通順流暢的繁體中文文字。保留學生情緒與行為的「關鍵事實」，去除無意義贅詞。將這段文字獨立放在【語音轉譯逐字稿】區。
+2. 【特教專業術語】：使用客觀、行為學派或認知學派的特教術語（例如：將「鬧脾氣」轉化為「情緒行為問題/挫折忍受度較低」；將「不理人」轉化為「社交互動質性欠佳」）。
+3. 【結構化格式】：固定輸出以下四個區塊，並使用 Markdown 格式（以 ### 作為小標題，以便排版）：
+   - ### 一、 學生基本現況與情緒狀態（包含生理、情緒、注意力、與他人互動等觀察）
+   - ### 二、 本次輔導焦點與教學目標（本次上課/晤談的核心課題）
+   - ### 三、 採取的輔導策略與具體介入（如：視覺化提示、社會故事、代幣制度、認知重構等）
+   - ### 四、 後續追蹤建議與協同合作事項（給導師、家長、或特教班老師的具體配合建議）
+
+請以客觀、溫和、支持性的筆調撰寫，避免主觀批判性言論。`;
+
+            let userParts = [];
+            if (uploadedAudioBase64) {
+                userParts.push({
+                    text: `${studentContext} 請基於這段音檔進行【語意潤飾】生成逐字稿，再轉成【IEP 結構化輔導紀錄】。格式請遵守規定，並用繁體中文輸出。`
+                });
+                userParts.push({
+                    inlineData: {
+                        mimeType: uploadedAudioMimeType,
+                        data: uploadedAudioBase64
+                    }
+                });
+            } else {
+                userParts.push({
+                    text: `${studentContext} 以下是老師提供的原始輔導草稿：\n\n"${fallbackText}"\n\n請幫忙整理成流暢的逐字稿與專業特教結構化紀錄。`
+                });
+            }
+
+            const payload = {
+                contents: [{ parts: userParts }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            try {
+                const response = await callGeminiWithRetry(payload);
+                if (response.error) {
+                    throw new Error(response.error.message || "API 呼叫失敗");
+                }
+                const generatedText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!generatedText) {
+                    throw new Error("無法解析 AI 的生成結果");
+                }
+
+                parseAndDisplayResult(generatedText, student);
+                showToast("智慧輔導紀錄生成成功！");
+
+            } catch (error) {
+                console.error("Gemini API 錯誤:", error);
+                if (error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
+                    showToast("API Key 無效或已過期，請點擊上方更換金鑰。", true);
+                } else {
+                    showToast(error.message || "處理失敗，請確認網路連線。", true);
+                }
+            } finally {
+                document.getElementById('loadingContainer').classList.add('hidden');
+                document.getElementById('generateBtn').disabled = false;
+            }
+        }
+
+        async function callGeminiWithRetry(payload) {
+            let delay = 1000;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const data = await response.json();
+                    if (response.ok) {
+                        return data;
+                    } else if (data.error) {
+                        // 若是金鑰錯誤等客戶端錯誤，不需重試直接拋出
+                        if(response.status >= 400 && response.status < 500 && response.status !== 429) {
+                            throw new Error(data.error.message);
+                        }
+                    }
+                } catch (error) {
+                    if (i === 4 || error.message.includes("API_KEY_INVALID")) throw error;
+                }
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
+            }
+            throw new Error("API 伺服器繁忙，已重試 5 次，請稍後再試。");
+        }
+
+        function parseAndDisplayResult(text, student) {
+            let transcriptText = "";
+            let summaryText = "";
+
+            if (text.includes("###")) {
+                const parts = text.split(/(?=### 一、|### 一)/);
+                transcriptText = parts[0] ? parts[0].replace(/語音轉譯|逐字稿|【|】/g, '').trim() : "（已整合轉譯）";
+                summaryText = parts.slice(1).join('\n\n').trim();
+            } else {
+                transcriptText = "語音分析完成。請參照右側結構化紀錄。";
+                summaryText = text;
+            }
+
+            document.getElementById('resultTitle').textContent = `學生輔導紀錄 - 新生成的待確認草稿`;
+            document.getElementById('resultSubtitle').textContent = `輔導對象：${student.name} (${student.type})`;
+            
+            document.getElementById('transcriptOutput').innerHTML = transcriptText.replace(/\n/g, '<br>');
+            document.getElementById('structuredOutput').innerHTML = summaryText.replace(/\n/g, '<br>');
+
+            document.getElementById('resultContainer').classList.remove('hidden');
+            document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyToClipboard() {
+            const structuredText = document.getElementById('structuredOutput').innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = structuredText;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+            showToast("結構化特教紀錄已複製至剪貼簿！");
+        }
+
+        function saveRecord() {
+            const transcript = document.getElementById('transcriptOutput').innerText;
+            const summary = document.getElementById('structuredOutput').innerText;
+            const today = new Date().toISOString().split('T')[0];
+
+            const newRecord = {
+                id: `r_${Date.now()}`,
+                studentId: selectedStudentId,
+                date: today,
+                transcript: transcript,
+                summary: summary
+            };
+
+            savedRecords.unshift(newRecord);
+            renderHistory(selectedStudentId);
+            showToast("紀錄已儲存至本機歷史紀錄！");
+        }
+
+        function openAddStudentModal() {
+            document.getElementById('addStudentModal').classList.remove('hidden');
+        }
+
+        function closeAddStudentModal() {
+            document.getElementById('addStudentModal').classList.add('hidden');
+        }
+
+        function saveNewStudent() {
+            const name = document.getElementById('newStudentName').value.trim();
+            const school = document.getElementById('newStudentSchool').value.trim();
+            const type = document.getElementById('newStudentType').value;
+
+            if (!name || !school) {
+                showToast("姓名與學校班級為必填欄位", true);
+                return;
+            }
+
+            const newStudent = {
+                id: `s_${Date.now()}`,
+                name: name,
+                school: school,
+                type: type,
+                active: false
+            };
+
+            students.push(newStudent);
+            renderStudents();
+            closeAddStudentModal();
+            showToast(`成功新增輔導學生：${name}`);
+            
+            document.getElementById('newStudentName').value = '';
+            document.getElementById('newStudentSchool').value = '';
+        }
+    </script>
+</body>
+</html>
