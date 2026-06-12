@@ -7,7 +7,7 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>https://github.com/lulutin20-gif/Special-Ed-AI-Assistant2/blob/main/index.txt
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap');
         body {
@@ -30,9 +30,9 @@
                 </div>
             </div>
             <div class="flex items-center space-x-3">
-                <button onclick="resetApiKey()" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors" title="重新設定您的 Gemini API 金鑰">
-                    <i data-lucide="key" class="w-3.5 h-3.5 mr-1"></i>
-                    更換金鑰
+                <button onclick="openApiKeyModal()" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors" title="設定或更改您的 Gemini API 金鑰">
+                    <i data-lucide="key" class="w-3.5 h-3.5 mr-1 text-amber-500"></i>
+                    <span id="keyBtnText">設定金鑰</span>
                 </button>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                     <span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -43,6 +43,20 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 未設定金鑰提示橫幅 -->
+        <div id="keyWarningBanner" class="hidden mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start space-x-3">
+            <div class="bg-amber-100 text-amber-800 p-1.5 rounded-lg">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="text-sm font-bold text-amber-900">尚未啟用 AI 分析功能</h3>
+                <p class="text-xs text-amber-700 mt-0.5">本系統使用 Google AI 技術。請點擊右上方「設定金鑰」或下方按鈕，免費申請並輸入您的 API 金鑰即可開始使用！</p>
+                <button onclick="openApiKeyModal()" class="mt-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center">
+                    立即設定金鑰 <i data-lucide="chevron-right" class="w-3.5 h-3.5 ml-0.5"></i>
+                </button>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
             <!-- 左側：學生選擇與設定 -->
@@ -265,6 +279,77 @@
         </div>
     </div>
 
+    <!-- 優化：API Key 金鑰設定自訂彈窗 (取代瀏覽器 prompt) -->
+    <div id="apiKeyModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="key" class="w-5 h-5 text-amber-500"></i>
+                    <h3 class="text-md font-bold text-slate-900">設定您的 Gemini API 金鑰</h3>
+                </div>
+                <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    本輔導系統完全免費，語音分析與轉譯功能直接連線至 Google 官方 Gemini 模型。為了保護學生隱私，所有資料與金鑰均儲存在您個人的瀏覽器中，不會上傳到任何第三方伺服器。
+                </p>
+
+                <!-- 步驟指南 -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                    <h4 class="text-xs font-bold text-indigo-950 flex items-center">
+                        <i data-lucide="help-circle" class="w-4 h-4 mr-1.5 text-indigo-600"></i>
+                        如何取得免費 Gemini API 金鑰？
+                    </h4>
+                    <ol class="text-xs text-slate-600 space-y-2 list-decimal list-inside">
+                        <li>點擊前往 <a href="https://aistudio.google.com/" target="_blank" class="text-indigo-600 font-bold hover:underline inline-flex items-center">Google AI Studio 官網 <i data-lucide="external-link" class="w-3 h-3 ml-0.5"></i></a>。</li>
+                        <li>登入您的 Google 帳號。</li>
+                        <li>點擊左上角的 <strong class="text-slate-800">「Get API key」</strong> 按鈕。</li>
+                        <li>點擊 <strong class="text-slate-800">「Create API key」</strong> 並建立一個新金鑰，將其複製起來貼到下方。</li>
+                    </ol>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">請在下方貼上金鑰 (AI_KEY)</label>
+                    <div class="relative">
+                        <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full pl-3 pr-10 py-2.5 border border-slate-200 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm font-mono">
+                        <button onclick="toggleKeyVisibility()" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600">
+                            <i data-lucide="eye" class="w-4.5 h-4.5" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-2">
+                    <button onclick="testApiKey()" id="testKeyBtn" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center py-1.5 px-3 rounded-lg hover:bg-indigo-50">
+                        <i data-lucide="activity" class="w-3.5 h-3.5 mr-1"></i>
+                        測試金鑰連線狀況
+                    </button>
+                    <button onclick="clearApiKey()" class="text-xs font-medium text-red-600 hover:text-red-800 flex items-center py-1.5 px-3 rounded-lg hover:bg-red-50">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5 mr-1"></i>
+                        清除已存金鑰
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+                <button onclick="closeApiKeyModal()" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50">取消</button>
+                <button onclick="saveApiKey()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700">儲存並啟用</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 優化：自訂確認對話視窗 (取代 confirm) -->
+    <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl border border-slate-100">
+            <h3 class="text-md font-bold text-slate-900" id="confirmTitle">確認提示</h3>
+            <p class="text-xs text-slate-500 leading-relaxed" id="confirmMessage">確認執行此操作嗎？</p>
+            <div class="flex justify-end space-x-3 pt-2">
+                <button id="confirmCancelBtn" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-medium hover:bg-slate-50">取消</button>
+                <button id="confirmOkBtn" class="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-medium hover:bg-red-700">確認</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 自訂通知 Toast -->
     <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center space-x-2 translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
         <i data-lucide="info" class="w-5 h-5 text-indigo-400" id="toastIcon"></i>
@@ -272,28 +357,139 @@
     </div>
 
     <script>
-        // API Key 管理邏輯
-        let apiKey = localStorage.getItem('gemini_api_key');
+        // API Key 安全讀取邏輯
+        const platformApiKey = ""; // 執行階段由平台提供 (如有)
+        let localApiKey = localStorage.getItem('gemini_api_key') || "";
 
-        function checkApiKey() {
-            if (!apiKey) {
-                apiKey = prompt("💡 初次使用請設定您的 Gemini API Key：\n(金鑰將安全地儲存於您個人的瀏覽器中，不會傳送給第三方)");
-                if (apiKey && apiKey.trim() !== "") {
-                    apiKey = apiKey.trim();
-                    localStorage.setItem('gemini_api_key', apiKey);
-                    showToast("API 金鑰設定完成！");
-                } else {
-                    alert("⚠️ 必須輸入 API Key 才能啟用 AI 智慧分析功能！請重新整理網頁再試一次。");
-                }
+        function getActiveApiKey() {
+            return platformApiKey || localApiKey;
+        }
+
+        // 檢查並更新 UI 狀態
+        function updateApiKeyUI() {
+            const hasKey = getActiveApiKey() !== "";
+            const warningBanner = document.getElementById('keyWarningBanner');
+            const keyBtnText = document.getElementById('keyBtnText');
+            
+            if (hasKey) {
+                warningBanner.classList.add('hidden');
+                keyBtnText.textContent = "已設定金鑰";
+                keyBtnText.parentElement.classList.remove('bg-slate-100', 'text-slate-600');
+                keyBtnText.parentElement.classList.add('bg-emerald-50', 'text-emerald-700');
+            } else {
+                warningBanner.classList.remove('hidden');
+                keyBtnText.textContent = "設定金鑰";
+                keyBtnText.parentElement.classList.remove('bg-emerald-50', 'text-emerald-700');
+                keyBtnText.parentElement.classList.add('bg-slate-100', 'text-slate-600');
             }
         }
 
-        function resetApiKey() {
-            if (confirm("確定要清除目前儲存的 API Key 並重新設定嗎？")) {
-                localStorage.removeItem('gemini_api_key');
-                apiKey = null;
-                checkApiKey();
+        // 開關 API 彈窗
+        function openApiKeyModal() {
+            document.getElementById('apiKeyInput').value = localApiKey;
+            document.getElementById('apiKeyModal').classList.remove('hidden');
+        }
+
+        function closeApiKeyModal() {
+            document.getElementById('apiKeyModal').classList.add('hidden');
+        }
+
+        // 密碼可見度切換
+        function toggleKeyVisibility() {
+            const input = document.getElementById('apiKeyInput');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (input.type === "password") {
+                input.type = "text";
+                eyeIcon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = "password";
+                eyeIcon.setAttribute('data-lucide', 'eye');
             }
+            lucide.createIcons();
+        }
+
+        // 儲存金鑰
+        function saveApiKey() {
+            const val = document.getElementById('apiKeyInput').value.trim();
+            if (val === "") {
+                showToast("未輸入任何金鑰", true);
+                return;
+            }
+            localApiKey = val;
+            localStorage.setItem('gemini_api_key', val);
+            updateApiKeyUI();
+            closeApiKeyModal();
+            showToast("金鑰已安全地儲存於本機裝置中！");
+        }
+
+        // 清除金鑰
+        function clearApiKey() {
+            showCustomConfirm("清除金鑰", "確認要清除此瀏覽器內儲存的 API 金鑰嗎？", () => {
+                localStorage.removeItem('gemini_api_key');
+                localApiKey = "";
+                document.getElementById('apiKeyInput').value = "";
+                updateApiKeyUI();
+                closeApiKeyModal();
+                showToast("金鑰已成功清除", true);
+            });
+        }
+
+        // 測試連線狀況 - 已優化：使用穩定版官方模型 gemini-1.5-flash
+        async function testApiKey() {
+            const testBtn = document.getElementById('testKeyBtn');
+            const inputVal = document.getElementById('apiKeyInput').value.trim();
+            const keyToTest = inputVal || getActiveApiKey();
+
+            if (!keyToTest) {
+                showToast("請先輸入金鑰再進行測試！", true);
+                return;
+            }
+
+            testBtn.disabled = true;
+            testBtn.innerHTML = `<span class="animate-spin mr-1 inline-block border-2 border-indigo-600 border-t-transparent rounded-full h-3 w-3"></span> 正在測試連線...`;
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${keyToTest}`;
+            const payload = { contents: [{ parts: [{ text: "Say 'OK' if you can hear me." }] }] };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    showToast("✅ 連線測試成功！該金鑰完全有效。");
+                } else {
+                    throw new Error(data.error?.message || "無法成功解析 API");
+                }
+            } catch (err) {
+                showToast(`❌ 測試失敗: ${err.message}`, true);
+            } finally {
+                testBtn.disabled = false;
+                testBtn.innerHTML = `<i data-lucide="activity" class="w-3.5 h-3.5 mr-1"></i> 測試金鑰連線狀況`;
+                lucide.createIcons();
+            }
+        }
+
+        // 自訂確認對話視窗
+        function showCustomConfirm(title, message, onOk) {
+            const modal = document.getElementById('confirmModal');
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+
+            modal.classList.remove('hidden');
+
+            const cleanUp = () => {
+                modal.classList.add('hidden');
+            };
+
+            document.getElementById('confirmOkBtn').onclick = () => {
+                onOk();
+                cleanUp();
+            };
+
+            document.getElementById('confirmCancelBtn').onclick = cleanUp;
         }
 
         // 初始化 Mock 學生資料
@@ -326,10 +522,15 @@
 
         window.onload = function() {
             lucide.createIcons();
-            checkApiKey(); // 載入時檢查 API Key
+            updateApiKeyUI(); // 檢查金鑰狀態並更新 UI
             renderStudents();
             renderHistory(selectedStudentId);
             initWebAudio();
+
+            // 如果沒有任何金鑰，在加載時自動跳出提示框引導
+            if (getActiveApiKey() === "") {
+                setTimeout(openApiKeyModal, 800);
+            }
         };
 
         function showToast(text, isError = false) {
@@ -353,7 +554,7 @@
             setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
+            }, 4000);
         }
 
         function renderStudents() {
@@ -461,9 +662,11 @@
         }
 
         function deleteHistoryRecord(recordId) {
-            savedRecords = savedRecords.filter(r => r.id !== recordId);
-            renderHistory(selectedStudentId);
-            showToast("歷史輔導紀錄已刪除", true);
+            showCustomConfirm("刪除紀錄", "確認要刪除這筆歷史輔導紀錄嗎？此動作將無法復原。", () => {
+                savedRecords = savedRecords.filter(r => r.id !== recordId);
+                renderHistory(selectedStudentId);
+                showToast("歷史輔導紀錄已刪除", true);
+            });
         }
 
         function switchInputTab(tab) {
@@ -520,7 +723,7 @@
                         startTimer();
                         updateRecordUI(true);
                     } catch (err) {
-                        showToast("無法獲取麥克風權限，請確認瀏覽器安全性設定。", true);
+                        showToast("無法獲取麥克風權限，請確認瀏覽器安全設定。", true);
                     }
                 } else {
                     mediaRecorder.stop();
@@ -581,9 +784,10 @@
         }
 
         async function processCounselingRecord() {
-            if (!apiKey) {
-                showToast("請先設定 Gemini API Key 才能執行此功能！", true);
-                checkApiKey();
+            const activeKey = getActiveApiKey();
+            if (!activeKey) {
+                showToast("請先設定 Gemini API 金鑰才能執行此功能！", true);
+                openApiKeyModal();
                 return;
             }
 
@@ -637,7 +841,7 @@
             };
 
             try {
-                const response = await callGeminiWithRetry(payload);
+                const response = await callGeminiWithRetry(payload, activeKey);
                 if (response.error) {
                     throw new Error(response.error.message || "API 呼叫失敗");
                 }
@@ -652,8 +856,9 @@
 
             } catch (error) {
                 console.error("Gemini API 錯誤:", error);
-                if (error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
-                    showToast("API Key 無效或已過期，請點擊上方更換金鑰。", true);
+                if (error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID") || error.message.includes("API key")) {
+                    showToast("API Key 無效或輸入錯誤，請重新設定您的金鑰。", true);
+                    openApiKeyModal();
                 } else {
                     showToast(error.message || "處理失敗，請確認網路連線。", true);
                 }
@@ -663,9 +868,10 @@
             }
         }
 
-        async function callGeminiWithRetry(payload) {
+        // 已優化：使用穩定版官方模型 gemini-1.5-flash
+        async function callGeminiWithRetry(payload, activeKey) {
             let delay = 1000;
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeKey}`;
 
             for (let i = 0; i < 5; i++) {
                 try {
@@ -679,18 +885,17 @@
                     if (response.ok) {
                         return data;
                     } else if (data.error) {
-                        // 若是金鑰錯誤等客戶端錯誤，不需重試直接拋出
-                        if(response.status >= 400 && response.status < 500 && response.status !== 429) {
+                        if (response.status >= 400 && response.status < 500 && response.status !== 429) {
                             throw new Error(data.error.message);
                         }
                     }
                 } catch (error) {
-                    if (i === 4 || error.message.includes("API_KEY_INVALID")) throw error;
+                    if (i === 4 || error.message.includes("API_KEY_INVALID") || error.message.includes("API key")) throw error;
                 }
                 await new Promise(resolve => setTimeout(resolve, delay));
                 delay *= 2;
             }
-            throw new Error("API 伺服器繁忙，已重試 5 次，請稍後再試。");
+            throw new Error("API 伺服器繁忙，請稍後再試。");
         }
 
         function parseAndDisplayResult(text, student) {
